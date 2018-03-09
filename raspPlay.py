@@ -25,7 +25,7 @@ class Player():
         self.listFiles=[]
         self.repeat = False
         self.stateBool = False
-        self.commands_dict={'playFile_':'playFile_','stop':'stop', 'next':'next', 'prev':'prev', 'volume-':'volume-','volume+':'volume+', 'status':'status','repeate':'repeate'}
+        self.commands_dict={'set_volume':'set_volume','playFile_':'playFile_','stop':'stop', 'next':'next', 'prev':'prev', 'status':'status','repeate':'repeate'}
         numOfLines=0
         for x,line in enumerate(os.listdir(os.getcwd())):
 
@@ -43,7 +43,7 @@ class Player():
     @trace    
     def playFile(self,name,timestamp,command):
         os.chdir(self.sndDir)
-        print(os.getcwd())
+        print('current dir: ' +str(os.getcwd()))
         print('play file')
         numOfLines=0
 
@@ -81,8 +81,8 @@ class Player():
                 else:
                     prevFile = self.listFiles[len(self.listFiles)-1]
                     
-        print('Next file: ' + str(nextFile)+ str(os.listdir(self.sndDir)[nextFile]))
-        print('Prev file: ' + str(prevFile)+ str(os.listdir(self.sndDir)[prevFile]))
+        print('Next file: ' + str(nextFile)+' '+ str(os.listdir(self.sndDir)[nextFile]))
+        print('Prev file: ' + str(prevFile)+' '+ str(os.listdir(self.sndDir)[prevFile]))
                 
  
                     
@@ -95,11 +95,12 @@ class Player():
         pygame.mixer.music.play()
         print('started playing...')
         self.printState(name)
-        self.FileAddRez('Answer:'+str(timestamp)+';'+'1')
+        self.FileAddRez(str(timestamp)+';'+'1')
         
         while pygame.mixer.music.get_busy():
             if self.stateBool:
                 self.printState(name)
+                time.sleep(1);
 
             log_info(str(pygame.mixer.music.get_pos()//1000)+ ' sec')
 ##            r,_,_=select.select([sys.stdin],[],[],1)
@@ -125,18 +126,19 @@ class Player():
                             self.repeat = False
                             log_info(' command - stop playback')
                             
-                    elif  command_pl == self.commands_dict['volume-']:
-                        self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        self.minusDb()
-                        log_info('volume "-"')
-                        self.FileAddRez(str(timestamp_pl)+";1")
-                        
                     
-                    elif  command_pl == self.commands_dict['volume+']:
+                        
+                    elif  self.commands_dict['set_volume']  in command_pl:
                         self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        self.plusDb()
-                        log_info('volume "+"')
-                        self.FileAddRez(str(timestamp_pl)+";1")
+                        command_pl = command_pl.split(':')
+                        volu=command_pl[1]
+                        try:
+                            pygame.mixer.music.set_volume(float(volu))
+                            print('set volume...'+str(volu))
+                            self.FileAddRez(str(timestamp_pl)+";1")
+                        except: 
+                        
+                            self.FileAddRez(str(timestamp_pl)+";0")
                                     
                     
                     elif  command_pl == self.commands_dict['next']:
@@ -202,6 +204,8 @@ class Player():
         if pygame.mixer.music.get_volume()<0:
             pygame.mixer.music.set_volume(0)
         print(pygame.mixer.music.get_volume())
+        
+    
                
     @trace    
     def printState(self,name):        
