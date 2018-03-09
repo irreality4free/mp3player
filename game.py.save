@@ -1,0 +1,245 @@
+#! /usr/bin/env python
+
+import datetime
+import time
+import pygame
+import sys
+import os
+import select
+import log_config
+from log_config import trace
+from log_config import log_error
+from log_config import log_info
+
+class Player():
+    @trace
+    def __init__(self):
+        log_info('Starting player')
+        self.workDir='/home/pi/mp3player'
+        self.cmdDir='/home/pi/mp3player/CmdF/control.txt'
+        self.cmdAnsw='/home/pi/mp3player/CmdF/answ.txt'
+        self.sndDir='/home/mp3player/files'
+        self.Break = False
+        self.DictofFiles={}
+        self.listFiles=[]
+        self.repeat = False
+        self.stateBool = False
+        numOfLines=0
+        for x,line in enumerate(os.listdir(os.getcwd())):
+
+                    if 'mp3' in line:
+                        numOfLines+=1
+                        self.DictofFiles[str(numOfLines)]=x
+                        self.listFiles.append(x)
+        
+        
+    @trace    
+    def menu_unit(self,unitName, subunitsNum,):
+        pass
+    
+            
+    @trace    
+    def playFile(self,name):
+        
+        numOfLines=0
+
+        self.listFiles=[]
+        for x,line in enumerate(os.listdir(os.getcwd())):
+
+            if 'mp3' in line:
+                numOfLines+=1
+
+                self.listFiles.append(x)
+                log_info('file found '+str(line))
+                
+                
+        log_info('playing file ' + str(name))
+        numInList=None
+
+        for x,line in enumerate(os.listdir(os.getcwd())):
+            if name in line:
+                numInList = x
+        for x,line in enumerate(self.listFiles):
+
+            if line == numInList:
+
+                if x<len(self.listFiles)-1:
+                    nextFile = self.listFiles[x+1]
+                else:
+                    nextFile = self.listFiles[0]
+                    
+                if x>0:
+                    prevFile = self.listFiles[x-1]
+                else:
+                    prevFile = self.listFiles[len(self.listFiles)-1]
+                
+ 
+                    
+        pygame.init()
+        pygame.mixer.init()
+        pygame.mixer.music.load(name)
+        pygame.mixer.music.play()
+        self.printState(name)
+        self.FileAddRez('playFile_','; Playing '+str(name))
+        
+        while pygame.mixer.music.get_busy():
+            if self.stateBool:
+                self.printState(name)
+
+            log_info(str(pygame.mixer.music.get_pos()//1000)+ ' sec')
+            r,_,_=select.select([sys.stdin],[],[],1)
+            f_com = self.FileCommands(self.cmdDir)
+##            if f_com != 'none':
+##                self.FileAddCmd(f_com)
+            if f_com !='none':
+                if  f_com == 'stop':
+                        print('stop')
+                        self.FileAddCmd(f_com)
+                        
+                        self.Break=True
+                        self.repeat = False
+                        log_info(' command - stop playback')
+                        
+                elif  f_com == 'volume-':
+                    self.FileAddCmd(f_com)
+                    self.minusDb()
+                    log_info('volume "-"')
+                    self.FileAddRez(f_com,'-0.1 volume')
+                    
+                
+                elif  f_com == 'volume+':
+                    self.FileAddCmd(f_com)
+                    self.plusDb()
+                    log_info('volume "+"')
+                    self.FileAddRez(f_com,'-0.1 volume')
+                                
+                
+                elif  f_com == 'next':
+                    self.FileAddCmd(f_com)
+                    self.playFile(str(os.listdir(os.getcwd())[nextFile]))
+                    log_info('play next file')
+                    self.FileAddRez(f_com,'playing '+ str(os.listdir(os.getcwd())[nextFile]))
+                    
+                elif f_com == 'prev':
+                    self.FileAddCmd(f_com)
+                    self.playFile(str(os.listdir(os.getcwd())[prevFile]))
+                    log_info('play previous file')
+                    self.FileAddRez(f_com,'playing '+ str(os.listdir(os.getcwd())[prevFile]))
+                    
+                elif  f_com == 'status':
+                    self.FileAddCmd(f_com)
+                    self.stateBool = not self.stateBool
+                    log_info('status view changed')
+                    self.FileAddRez(f_com,'status in console - '+str(self.stateBool))
+                    
+                elif  f_com == 'repeate':
+                    self.FileAddCmd(f_com)
+                    self.repeat = not self.repeat
+                    self.FileAddRez(f_com,'repeate - '+ str(self.repeat))
+                    
+                        
+                    print('\nrepeat - ' + str(self.repeat)+'\n')
+                    log_info('repeat value changed')
+                else:
+                    self.FileAddCmd(f_com)
+                    self.FileAddRez(f_com,'wrong command')
+                    self.FileCommandsErase(self.cmdDir)
+                
+            if self.Break:
+                    self.stop()
+                    self.FileAddRez(f_com,'playback stoped')
+                    self.Break=False
+                    log_info('playback stopped')
+           
+                    
+        print('end of file')
+        log_info('end of file')
+        if self.repeat:
+            self.playFile(name)
+            
+    @trace    
+    def stop(self):
+        pygame.mixer.music.stop()
+    @trace    
+    def minusDb(self):
+        currentVol= pygame.mixer.music.get_volume()
+        pygame.mixer.music.set_volume(currentVol-0.1)
+        if pygame.mixer.music.get_volume()<0:
+            pygame.mixer.music.set_volume(0)
+        print(pygame.mixer.music.get_volume())
+    @trace    
+    def plusDb(self):
+        currentVol= pygame.mixer.music.get_volume()
+        pygame.mixer.music.set_volume(currentVol+0.1)
+        if pygame.mixer.music.get_volume()<0:
+            pygame.mixer.music.set_volume(0)
+        print(pygame.mixer.music.get_volume())
+               
+    @trace    
+    def printState(self,name):        
+        print('playing...'+name)
+        print(str(pygame.mixer.music.get_pos()//1000)+ ' sec')
+        print('volume - '+str(pygame.mixer.music.get_volume()))
+        print('repeat - '+str(self.repeat)+'\n')
+        
+    def FileCommands(self,file_name):
+        data = 'none'
+        with open(file_name, 'r') as file:
+            for string in file:
+                data = string
+
+            
+        with open(file_name, 'w') as file:
+            pass
+        return data
+    
+    def FileCommandsErase(self,file_name):
+        with open(file_name, 'w') as file:
+            pass
+        
+    def FileAddCmd(self,cmd):
+        with open(self.cmdAnsw, 'a') as file:
+            file.write('\n'+str(cmd)+ ' ' +str(datetime.datetime.now()) )
+            
+    def FileAddRez(self, cmd,rez):
+        with open(self.cmdAnsw, 'a') as file:
+            file.write('\n'+str(cmd)+ ' ' +str(rez) )
+            
+        
+    def Run(self):
+        os.chdir(self.sndDir)
+        self.FileCommandsErase(self.cmdAnsw)
+
+        while(1):
+
+
+            command = self.FileCommands(self.cmdDir)
+            if command != 'none':
+		print(command)
+		com_list=command.split(';')
+		if len(com_list) == 2:           
+                s
+elf.FileAddCmd(command)
+		
+                if 'playFile_' in command:
+                    try:
+                            self.playFile(command[9:])
+                            
+                    except pygame.error:
+                            print('wrong name')
+                            self.FileAddRez(command,' wrong name')
+                            
+                else:
+                    print('wrong command')
+                    self.FileCommandsErase(self.cmdDir)
+                    self.FileAddRez(command,'; wrong command')
+                
+                
+        
+        
+    
+    
+player = Player()
+player.Run()
+##player.playFile('test1.mp3')
+
