@@ -19,13 +19,15 @@ class Player():
         self.cmdDir='/home/pi/mp3player/CmdF/control.txt'
         self.cmdAnsw='/home/pi/mp3player/CmdF/answ.txt'
         self.sndDir='/home/pi/mp3player/files/'
+        self.npFile='/home/pi/mp3player/CmdF/playlist.txt'
+        self.stateFile = '/home/pi/mp3player/CmdF/nowstate.txt'
         self.Erase = False
         self.Break = False
         self.DictofFiles={}
         self.listFiles=[]
         self.repeat = False
         self.stateBool = False
-        self.commands_dict={'set_volume':'set_volume','playFile_':'playFile_','stop':'stop', 'next':'next', 'prev':'prev', 'status':'status','repeate':'repeate'}
+        self.commands_dict={'set_volume':'set_volume','playFile':'playFile','stop':'stop', 'next':'next', 'prev':'prev', 'status':'status','repeate':'repeate'}
         numOfLines=0
         for x,line in enumerate(os.listdir(os.getcwd())):
 
@@ -55,8 +57,7 @@ class Player():
 
                 self.listFiles.append(x)
                 log_info('file found '+str(line))
-##        for num in self.listFiles:        
-##            print(os.listdir[num])
+
         print('directory files:')
         print(os.listdir(self.sndDir))
                 
@@ -83,6 +84,7 @@ class Player():
                     
         print('Next file: ' + str(nextFile)+' '+ str(os.listdir(self.sndDir)[nextFile]))
         print('Prev file: ' + str(prevFile)+' '+ str(os.listdir(self.sndDir)[prevFile]))
+        self.SaveNP(os.listdir(self.sndDir)[nextFile],os.listdir(self.sndDir)[prevFile])
                 
  
                     
@@ -96,7 +98,7 @@ class Player():
         print('started playing...')
         self.printState(name)
         self.FileAddRez(str(timestamp)+';'+'1')
-        
+        self.SaveState(1)
         while pygame.mixer.music.get_busy():
             if self.stateBool:
                 self.printState(name)
@@ -111,11 +113,12 @@ class Player():
             if f_com !='none':
                 print(f_com)
                 f_com = f_com.split(';')
-                if len(f_com) == 2:
-                    print('deb1')
+                if len(f_com) == 3:
+                    print('ready for playback commands input')
                     
                     timestamp_pl = f_com[0]
                     command_pl = f_com[1]
+                    param_pl = f_com[2]
                     print('timestamp: '+ timestamp_pl)
                     print('command: '+ command_pl)
                     if  command_pl == self.commands_dict['stop']:
@@ -128,13 +131,12 @@ class Player():
                             
                     
                         
-                    elif  self.commands_dict['set_volume']  in command_pl:
+                    elif command_pl == self.commands_dict['set_volume']:
                         self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        command_pl = command_pl.split(':')
-                        volu=command_pl[1]
+                        
                         try:
-                            pygame.mixer.music.set_volume(float(volu))
-                            print('set volume...'+str(volu))
+                            pygame.mixer.music.set_volume(float(param_pl)/100)
+                            print('set volume...'+str(param_pl/100))
                             self.FileAddRez(str(timestamp_pl)+";1")
                         except: 
                         
@@ -159,6 +161,16 @@ class Player():
                         log_info('status view changed')
                         self.FileAddRez(str(timestamp_pl)+";1")
                         
+                    elif command == self.commands_dict['playFile']:
+                        
+                        try:
+                                print(command)
+                                self.playFile(param_pl,timestamp_pl,command_pl)
+                                
+                        except pygame.error:
+                                print('wrong name')
+                                self.FileAddRez(str(timestamp)+';'+'0')
+                        
                     elif  command_pl == self.commands_dict['repeate']:
                         self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
                         self.repeat = not self.repeat
@@ -168,7 +180,7 @@ class Player():
                         print('\nrepeat - ' + str(self.repeat)+'\n')
                         log_info('repeat value changed')
                     else:
-##                        self.FileAddCmd(f_com)
+
                         self.FileAddRez(str(timestamp_pl)+';0')
                         self.FileCommandsErase(self.cmdDir)
                 else:
@@ -184,6 +196,7 @@ class Player():
                     
         print('end of file')
         log_info('end of file')
+        self.SaveState(0)
         if self.repeat:
             self.playFile(name,'repeate file','1')
             
@@ -240,6 +253,18 @@ class Player():
         with open(self.cmdAnsw, 'a') as file:
             file.write('\n'+str(rez) )
             
+    def SaveNP(self,next,prev):
+        with open(self.npFile, 'w') as file:
+            file.write(str(next)+';'+str(prev))
+        
+    def SaveState(self,state):
+        with open(self.stateFile, 'w') as file:
+            if state == 1:
+                file.write('playing')
+            if state == 0:
+                file.write('not playing')
+        
+            
         
     def Run(self):
         os.chdir(self.sndDir)
@@ -254,15 +279,16 @@ class Player():
             if command != 'none':
 		print(command)
 		com_list = command.split(';')
-		if len(com_list) == 2:
+		if len(com_list) == 3:
                     timestamp = com_list[0]
                     command = com_list[1]
+                    param = com_list[2]
                     self.FileAddCmd(str(timestamp)+';'+str(command))
-                    if 'playFile_' in command:
-                        print('deb')
+                    if command == self.commands_dict['playFile']:
+                        
                         try:
-                                print(command[9:])
-                                self.playFile(command[9:],timestamp,command)
+                                print(command)
+                                self.playFile(param,timestamp,command)
                                 
                         except pygame.error:
                                 print('wrong name')
