@@ -98,14 +98,13 @@ class Player():
         print('started playing...')
         self.printState(name)
         self.FileAddRez(str(timestamp)+';'+'1')
-        self.SaveState(1)
+        self.SaveState(1,name)
         while pygame.mixer.music.get_busy():
             if self.stateBool:
                 self.printState(name)
                 time.sleep(1);
 
             log_info(str(pygame.mixer.music.get_pos()//1000)+ ' sec')
-##            r,_,_=select.select([sys.stdin],[],[],1)
             f_com = self.FileCommands(self.cmdDir)
             
             
@@ -196,7 +195,7 @@ class Player():
                     
         print('end of file')
         log_info('end of file')
-        self.SaveState(0)
+        self.SaveState(0,'noName')
         if self.repeat:
             self.playFile(name,'repeate file','1')
             
@@ -257,12 +256,29 @@ class Player():
         with open(self.npFile, 'w') as file:
             file.write(str(next)+';'+str(prev))
         
-    def SaveState(self,state):
+    def SaveState(self,state,name):
         with open(self.stateFile, 'w') as file:
             if state == 1:
-                file.write('playing')
+                file.write('playing;'+str(name))
             if state == 0:
-                file.write('not playing')
+                file.write('not_playing;0')
+                
+    def ChkShutDw(self):        
+        with open(self.stateFile, 'r') as file:
+            data='none'
+            for string in file:
+                data = string
+            data = data.split(';')
+            if len(data)==2:
+                if data[0] == 'playing':
+                    try:
+                        print('powerdown recovery; Playing file: '+ str(data[1]))
+                        self.playFile(data[1],'powerdown','powerdown')
+                                
+                    except pygame.error:
+                        print('wrong name')
+                        self.FileAddRez(str(timestamp)+';'+'0')
+                    
         
             
         
@@ -272,6 +288,7 @@ class Player():
         if self.Erase:
             self.FileCommandsErase(self.cmdAnsw)
         print('start')
+        self.ChkShutDw()
 
         while(1):
 
