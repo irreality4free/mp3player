@@ -27,7 +27,7 @@ class Player():
         self.listFiles=[]
         self.repeat = False
         self.stateBool = False
-        self.commands_dict={'set_volume':'set_volume','playFile':'playFile','stop':'stop', 'next':'next', 'prev':'prev', 'status':'status','repeate':'repeate'}
+        self.commands_dict={'set_volume':'set_volume','playFile':'playFile','stop':'stop', 'next':'next', 'prev':'prev', 'status':'status','repeat':'repeat'}
         numOfLines=0
         for x,line in enumerate(os.listdir(os.getcwd())):
 
@@ -81,123 +81,127 @@ class Player():
                     prevFile = self.listFiles[x-1]
                 else:
                     prevFile = self.listFiles[len(self.listFiles)-1]
+        try:            
+            print('Next file: ' + str(nextFile)+' '+ str(os.listdir(self.sndDir)[nextFile]))
+            print('Prev file: ' + str(prevFile)+' '+ str(os.listdir(self.sndDir)[prevFile]))
+            self.SaveNP(os.listdir(self.sndDir)[nextFile],os.listdir(self.sndDir)[prevFile])
                     
-        print('Next file: ' + str(nextFile)+' '+ str(os.listdir(self.sndDir)[nextFile]))
-        print('Prev file: ' + str(prevFile)+' '+ str(os.listdir(self.sndDir)[prevFile]))
-        self.SaveNP(os.listdir(self.sndDir)[nextFile],os.listdir(self.sndDir)[prevFile])
+     
+                        
+            pygame.init()
+            pygame.mixer.init()
+            
+            print('loading... '+str(name))
+            
+            pygame.mixer.music.load(name)
+            pygame.mixer.music.play()
+            print('started playing...')
+            self.printState(name)
+            self.FileAddRez(str(timestamp)+';'+'1')
+            self.SaveState(1,name)
+            while pygame.mixer.music.get_busy():
+                if self.stateBool:
+                    self.printState(name)
+                    time.sleep(1);
+
+                log_info(str(pygame.mixer.music.get_pos()//1000)+ ' sec')
+                f_com = self.FileCommands(self.cmdDir)
                 
- 
-                    
-        pygame.init()
-        pygame.mixer.init()
-        
-        print('loading... '+str(name))
-        
-        pygame.mixer.music.load(name)
-        pygame.mixer.music.play()
-        print('started playing...')
-        self.printState(name)
-        self.FileAddRez(str(timestamp)+';'+'1')
-        self.SaveState(1,name)
-        while pygame.mixer.music.get_busy():
-            if self.stateBool:
-                self.printState(name)
-                time.sleep(1);
+                
 
-            log_info(str(pygame.mixer.music.get_pos()//1000)+ ' sec')
-            f_com = self.FileCommands(self.cmdDir)
-            
-            
-
-            if f_com !='none':
-                print(f_com)
-                f_com = f_com.split(';')
-                if len(f_com) == 3:
-                    print('ready for playback commands input')
-                    
-                    timestamp_pl = f_com[0]
-                    command_pl = f_com[1]
-                    param_pl = f_com[2]
-                    print('timestamp: '+ timestamp_pl)
-                    print('command: '+ command_pl)
-                    if  command_pl == self.commands_dict['stop']:
-                            print('stop')
+                if f_com !='none':
+                    print(f_com)
+                    f_com = f_com.split(';')
+                    if len(f_com) == 3:
+                        print('ready for playback commands input')
+                        
+                        timestamp_pl = f_com[0]
+                        command_pl = f_com[1]
+                        param_pl = f_com[2]
+                        print('timestamp: '+ timestamp_pl)
+                        print('command: '+ command_pl)
+                        if  command_pl == self.commands_dict['stop']:
+                                print('stop')
+                                self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
+                                
+                                self.Break=True
+##                                self.repeat = False
+                                log_info(' command - stop playback')
+                                
+                        
+                            
+                        elif command_pl == self.commands_dict['set_volume']:
                             self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
                             
-                            self.Break=True
-                            self.repeat = False
-                            log_info(' command - stop playback')
+                            try:
+                                pygame.mixer.music.set_volume(float(param_pl)/100)
+                                print('set volume...'+str(param_pl/100))
+                                self.FileAddRez(str(timestamp_pl)+";1")
+                            except: 
                             
-                    
+                                self.FileAddRez(str(timestamp_pl)+";0")
+                                        
                         
-                    elif command_pl == self.commands_dict['set_volume']:
-                        self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        
-                        try:
-                            pygame.mixer.music.set_volume(float(param_pl)/100)
-                            print('set volume...'+str(param_pl/100))
+                        elif  command_pl == self.commands_dict['next']:
+                            self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
+                            self.playFile(str(os.listdir(self.sndDir)[nextFile]),timestamp_pl,command_pl)
+                            log_info('play next file')
                             self.FileAddRez(str(timestamp_pl)+";1")
-                        except: 
-                        
-                            self.FileAddRez(str(timestamp_pl)+";0")
-                                    
-                    
-                    elif  command_pl == self.commands_dict['next']:
-                        self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        self.playFile(str(os.listdir(self.sndDir)[nextFile]),timestamp_pl,command_pl)
-                        log_info('play next file')
-                        self.FileAddRez(str(timestamp_pl)+";1")
-                        
-                    elif command_pl == self.commands_dict['prev']:
-                        self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        self.playFile(str(os.listdir(self.sndDir)[prevFile]),timestamp_pl,command_pl)
-                        log_info('play previous file')
-                        self.FileAddRez(str(timestamp_pl)+";1")
-                        
-                    elif  command_pl == self.commands_dict['status']:
-                        self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        self.stateBool = not self.stateBool
-                        log_info('status view changed')
-                        self.FileAddRez(str(timestamp_pl)+";1")
-                        
-                    elif command == self.commands_dict['playFile']:
-                        
-                        try:
-                                print(command)
-                                self.playFile(param_pl,timestamp_pl,command_pl)
-                                
-                        except pygame.error:
-                                print('wrong name')
-                                self.FileAddRez(str(timestamp)+';'+'0')
-                        
-                    elif  command_pl == self.commands_dict['repeate']:
-                        self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
-                        self.repeat = not self.repeat
-                        self.FileAddRez(str(timestamp_pl)+";1")
-                        
                             
-                        print('\nrepeat - ' + str(self.repeat)+'\n')
-                        log_info('repeat value changed')
-                    else:
+                        elif command_pl == self.commands_dict['prev']:
+                            self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
+                            self.playFile(str(os.listdir(self.sndDir)[prevFile]),timestamp_pl,command_pl)
+                            log_info('play previous file')
+                            self.FileAddRez(str(timestamp_pl)+";1")
+                            
+                        elif  command_pl == self.commands_dict['status']:
+                            self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
+                            self.stateBool = not self.stateBool
+                            log_info('status view changed')
+                            self.FileAddRez(str(timestamp_pl)+";1")
+                            
+                        elif command_pl == self.commands_dict['playFile']:
+                            
+                            try:
+                                    print(command)
+                                    self.playFile(param_pl,timestamp_pl,command_pl)
+                                    
+                            except pygame.error:
+                                    print('wrong name')
+                                    self.FileAddRez(str(timestamp)+';'+'0')
+                            
+                        elif  command_pl == self.commands_dict['repeat']:
+                            self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
+                            self.repeat = not self.repeat
+                            self.SaveState(1,name)
+                            self.FileAddRez(str(timestamp_pl)+";1")
+                            
+                                
+                            print('\nrepeat - ' + str(self.repeat)+'\n')
+                            log_info('repeat value changed')
+                        else:
 
-                        self.FileAddRez(str(timestamp_pl)+';0')
+                            self.FileAddRez(str(timestamp_pl)+';0')
+                            self.FileCommandsErase(self.cmdDir)
+                    else:
+                        self.FileAddRez('wrong command')
                         self.FileCommandsErase(self.cmdDir)
-                else:
-                    self.FileAddRez('wrong command')
-                    self.FileCommandsErase(self.cmdDir)
-                
-            if self.Break:
-                    self.stop()
-                    self.FileAddRez(str(timestamp_pl)+";1")
-                    self.Break=False
-                    log_info('playback stopped')
-           
                     
-        print('end of file')
-        log_info('end of file')
-        self.SaveState(0,'noName')
-        if self.repeat:
-            self.playFile(name,'repeate file','1')
+                if self.Break:
+                        self.stop()
+                        self.FileAddRez(str(timestamp_pl)+";1")
+                        self.Break=False
+                        log_info('playback stopped')
+               
+                        
+            print('end of file')
+            log_info('end of file')
+            self.SaveState(0,'noName')
+            if self.repeat:
+                self.playFile(name,'repeate file','1')
+        except UnboundLocalError:
+            print('wrong name')
+            self.FileAddRez(str(timestamp)+';0')
             
     @trace    
     def stop(self):
@@ -259,9 +263,9 @@ class Player():
     def SaveState(self,state,name):
         with open(self.stateFile, 'w') as file:
             if state == 1:
-                file.write('playing;'+str(name))
+                file.write('playing;'+str(name)+';'+str(self.repeat))
             if state == 0:
-                file.write('not_playing;0')
+                file.write('not_playing;0;'+str(self.repeat))
                 
     def ChkShutDw(self):        
         with open(self.stateFile, 'r') as file:
@@ -269,11 +273,22 @@ class Player():
             for string in file:
                 data = string
             data = data.split(';')
-            if len(data)==2:
+            if len(data)==3:
                 if data[0] == 'playing':
                     try:
                         print('powerdown recovery; Playing file: '+ str(data[1]))
+                        print(data[2])
+                        if str(data[2]) == 'True':
+                            self.repeat = True
+                        if str(data[2]) == 'False':
+                            self.repeat = False
                         self.playFile(data[1],'powerdown','powerdown')
+                        print(data[3])
+                        if str(data[2]) == 'True':
+                            self.repeat = True
+                        if str(data[2]) == 'False':
+                            self.repeat = False
+                        
                                 
                     except pygame.error:
                         print('wrong name')
