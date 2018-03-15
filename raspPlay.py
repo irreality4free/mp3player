@@ -125,7 +125,7 @@ class Player():
                                 self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
                                 
                                 self.Break=True
-##                                self.repeat = False
+                                self.repeat = False
                                 log_info(' command - stop playback')
                                 
                         
@@ -283,7 +283,7 @@ class Player():
                         if str(data[2]) == 'False':
                             self.repeat = False
                         self.playFile(data[1],'powerdown','powerdown')
-                        print(data[3])
+                        print(data[2])
                         if str(data[2]) == 'True':
                             self.repeat = True
                         if str(data[2]) == 'False':
