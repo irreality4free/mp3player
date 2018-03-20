@@ -25,6 +25,7 @@ class Player():
         self.Break = False
         self.DictofFiles={}
         self.listFiles=[]
+        self.volume = 1.0
         self.repeat = False
         self.stateBool = False
         self.delay_tr = 0;
@@ -97,6 +98,8 @@ class Player():
             pygame.mixer.music.load(name)
             pygame.mixer.music.play()
             print('started playing...')
+            pygame.mixer.music.set_volume(self.volume)
+            
             self.printState(name)
             self.FileAddRez(str(timestamp)+';'+'1')
             self.SaveState(1,name)
@@ -274,9 +277,9 @@ class Player():
     def SaveState(self,state,name):
         with open(self.stateFile, 'w') as file:
             if state == 1:
-                file.write('playing;'+str(name)+';'+str(self.repeat))
+                file.write('playing;'+str(name)+';'+str(self.repeat)+';'+str(self.delay_tr)+';'+str(pygame.mixer.music.get_volume()*100))
             if state == 0:
-                file.write('not_playing;0;'+str(self.repeat))
+                file.write('not_playing;0;'+str(self.repeat)+';'+str(self.delay_tr)+';'+str(pygame.mixer.music.get_volume()*100))
                 
     def ChkShutDw(self):        
         with open(self.stateFile, 'r') as file:
@@ -284,26 +287,32 @@ class Player():
             for string in file:
                 data = string
             data = data.split(';')
-            if len(data)==3:
+            if len(data)==5:
                 if data[0] == 'playing':
                     try:
                         print('powerdown recovery; Playing file: '+ str(data[1]))
                         print(data[2])
+                        self.delay_tr = int(data[3])
+                        self.volume = float(data[4])/100
                         if str(data[2]) == 'True':
                             self.repeat = True
                         if str(data[2]) == 'False':
                             self.repeat = False
                         self.playFile(data[1],'powerdown','powerdown')
-                        print(data[2])
-                        if str(data[2]) == 'True':
-                            self.repeat = True
-                        if str(data[2]) == 'False':
-                            self.repeat = False
-                        
-                                
+##                        print(data[2])
+##                        if str(data[2]) == 'True':
+##                            self.repeat = True
+##                        if str(data[2]) == 'False':
+##                            self.repeat = False
                     except pygame.error:
                         print('wrong name')
                         self.FileAddRez(str(timestamp)+';'+'0')
+                if data[0] =='not_playing':
+                    self.delay_tr = int(data[3])
+                    self.volume = float(data[4])/100
+                        
+                                
+                    
                     
         
             
@@ -354,4 +363,5 @@ class Player():
 player = Player()
 player.Run()
 ##player.playFile('test1.mp3')
+
 
