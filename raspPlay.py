@@ -27,7 +27,8 @@ class Player():
         self.listFiles=[]
         self.repeat = False
         self.stateBool = False
-        self.commands_dict={'set_volume':'set_volume','playFile':'playFile','stop':'stop', 'next':'next', 'prev':'prev', 'status':'status','repeat':'repeat'}
+        self.delay_tr = 0;
+        self.commands_dict={'set_delay':'set_delay','set_volume':'set_volume','playFile':'playFile','stop':'stop', 'next':'next', 'prev':'prev', 'status':'status','repeat':'repeat'}
         numOfLines=0
         for x,line in enumerate(os.listdir(os.getcwd())):
 
@@ -155,6 +156,7 @@ class Player():
                             self.FileAddRez(str(timestamp_pl)+";1")
                             
                         elif  command_pl == self.commands_dict['status']:
+                            print('status')
                             self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
                             self.stateBool = not self.stateBool
                             log_info('status view changed')
@@ -179,6 +181,14 @@ class Player():
                                 
                             print('\nrepeat - ' + str(self.repeat)+'\n')
                             log_info('repeat value changed')
+                            
+                        elif command_pl == self.commands_dict['set_delay']:
+                            print('delay:'+str(param_pl))
+                            self.FileAddCmd(str(timestamp_pl)+";"+str(command_pl))
+                            self.delay_tr = int(param_pl)
+                            self.SaveState(1,name)
+                            self.FileAddRez(str(timestamp_pl)+";1")
+                            
                         else:
 
                             self.FileAddRez(str(timestamp_pl)+';0')
@@ -198,6 +208,7 @@ class Player():
             log_info('end of file')
             self.SaveState(0,'noName')
             if self.repeat:
+                time.sleep(self.delay_tr)
                 self.playFile(name,'repeate file','1')
         except UnboundLocalError:
             print('wrong name')
